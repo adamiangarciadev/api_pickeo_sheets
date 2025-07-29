@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Pickeo de Artículos</title>
+</head>
+<body>
+    <h2>Formulario de Pickeo</h2>
+
+    <p>📅 Fecha: <span id="fecha"></span></p>
+
+    <label for="remito">N° Remito:</label>
+    <input type="text" id="remito" required><br><br>
+
+    <label for="responsable">Responsable de pickeo:</label>
+    <select id="responsable">
+        <option value="Sergio">Sergio</option>
+        <option value="Damián">Damián</option>
+        <option value="Pato">Pato</option>
+    </select><br><br>
+
+    <label for="origen">Sucursal de origen:</label>
+    <select id="origen">
+        <option value="AVELLANEDA 1">Avellaneda 1</option>
+        <option value="Depósito">Depósito</option>
+        <option value="AVELLANEDA 2">Avellaneda 2</option>
+        <option value="LAMARCA">Lamarca</option>
+        <option value="CORRIENTES 2">Corrientes 2</option>
+        <option value="CORRIENTES 1">Corrientes 1</option>
+        <option value="SARMIENTO">Sarmiento</option>
+        <option value="CASTELLI">Castelli</option>
+    </select><br><br>
+
+    <label for="destino">Sucursal de destino:</label>
+    <select id="destino">
+        <option value="AVELLANEDA 1">Avellaneda 1</option>
+        <option value="Depósito">Depósito</option>
+        <option value="AVELLANEDA 2">Avellaneda 2</option>
+        <option value="LAMARCA">Lamarca</option>
+        <option value="CORRIENTES 2">Corrientes 2</option>
+        <option value="CORRIENTES 1">Corrientes 1</option>
+        <option value="SARMIENTO">Sarmiento</option>
+        <option value="CASTELLI">Castelli</option>
+    </select><br><br>
+
+    <h3>Códigos pickeados (<span id="contador">0</span>)</h3>
+    <input type="text" id="codigoInput" placeholder="Ingresar código">
+    <button onclick="agregarCodigo()">Agregar</button>
+    <ul id="lista"></ul>
+
+    <button onclick="guardar()">Guardar Pickeo</button>
+
+    <script>
+        const codigos = [];
+        let equivalencias = [];
+
+        async function cargarArticulos() {
+            const res = await fetch("http://127.0.0.1:8000/articulos");
+            equivalencias = await res.json();
+        }
+
+        function actualizarContador() {
+            document.getElementById("contador").innerText = codigos.length;
+        }
+
+        function buscarDescripcion(codigo) {
+            const art = equivalencias.find(item => item.codigo_barra === codigo);
+            if (art) {
+                return ` — ${art.codigo_articulo || ""} | Talle: ${art.talle || ""} | Color: ${art.color || ""}`;
+            }
+            return " — ❌ No encontrado en hoja Equivalencias";
+        }
+
+        function agregarCodigo() {
+            const input = document.getElementById("codigoInput");
+            const codigo = input.value.trim();
+            if (codigo !== "") {
+                codigos.push(codigo);
+                const li = document.createElement("li");
+                li.innerText = codigo + buscarDescripcion(codigo);
+                document.getElementById("lista").appendChild(li);
+                input.value = "";
+                actualizarContador();
+            }
+        }
+
+        function guardar() {
+            const fecha = document.getElementById("fecha").innerText;
+            const remito = document.getElementById("remito").value.trim();
+            const responsable = document.getElementById("responsable").value;
+            const origen = document.getElementById("origen").value;
+            const destino = document.getElementById("destino").value;
+
+            if (!remito || codigos.length === 0) {
+                alert("Debe ingresar número de remito y al menos un código.");
+                return;
+            }
+
+            const nombreArchivo = `${fecha} - ${remito} - de ${origen} - a ${destino} - ${responsable}`;
+
+            fetch("http://127.0.0.1:8000/guardar", {
+                method: "POST",
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ codigos, nombre: nombreArchivo })
+            })
+            .then(resp => resp.json())
+            .then(data => alert("Guardado: " + data.archivo))
+            .catch(err => alert("Error: " + err));
+        }
+
+        window.onload = () => {
+            const f = new Date();
+            const fecha = `${f.getDate().toString().padStart(2, '0')}-${(f.getMonth()+1).toString().padStart(2, '0')}-${f.getFullYear()}`;
+            document.getElementById("fecha").innerText = fecha;
+            cargarArticulos();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+# Ignorar credenciales sensibles
+credentials.json
+token.json
+
+# Archivos temporales
+__pycache__/
+*.pyc
+*.txt
+*.log
+.env
