@@ -64,7 +64,9 @@
         }
 
         function buscarDescripcion(codigo) {
-            const art = equivalencias.find(item => item.codigo_barra === codigo);
+            const art = equivalencias.find(item =>
+                String(item.codigo_barra).trim() === String(codigo).trim()
+            );
             if (art) {
                 return ` — ${art.codigo_articulo || ""} | Talle: ${art.talle || ""} | Color: ${art.color || ""}`;
             }
