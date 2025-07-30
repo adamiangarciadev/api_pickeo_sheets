@@ -1,11 +1,18 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
 from google_drive import guardar_en_drive
+import datetime
+import requests
 
+# Configuración
+SHEET_ID = "12DeLHKDeClHc_e-bahUpfqZFBUUpCdcP"
+SHEET_NAME = "Equivalencias"
+
+# API
 app = FastAPI()
+
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -15,29 +22,25 @@ app.add_middleware(
 )
 
 class GuardarRequest(BaseModel):
-    codigos: list[str]
+    codigos: list
     nombre: str
 
-def obtener_datos_hoja():
-    scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
-    creds = ServiceAccountCredentials.from_json_keyfile_name('credentials.json', scope)
-    client = gspread.authorize(creds)
-    sheet = client.open_by_key("12DeLHKDeClHc_e-bahUpfqZFBUUpCdcP").worksheet("Equivalencias")
-    data = sheet.get_all_records()
-    return data
-
 @app.get("/")
-def raiz():
+def root():
     return {"mensaje": "API Pickeo desde Google Sheets"}
 
-@app.get("/articulos")
-def obtener_articulos():
-    data = obtener_datos_hoja()
-    return data
-
 @app.post("/guardar")
-def guardar_pedido(data: GuardarRequest):
-    if not data.codigos:
-        raise HTTPException(status_code=400, detail="Lista vacía de códigos")
-    nombre_archivo = guardar_en_drive(data.codigos, data.nombre)
-    return {"mensaje": "Guardado OK", "archivo": nombre_archivo}
+def guardar_archivo(data: GuardarRequest):
+    # Crear archivo TXT con los códigos
+    nombre_archivo = data.nombre.strip().replace(" ", "_") + ".txt"
+    with open(nombre_archivo, "w") as f:
+        for c in data.codigos:
+            f.write(f"{c}\n")
+
+    # Subir a Google Drive
+    file_id = guardar_en_drive(nombre_archivo)
+
+    # Eliminar el archivo local después de subir
+    os.remove(nombre_archivo)
+
+    return {"archivo": nombre_archivo, "drive_id": file_id}
